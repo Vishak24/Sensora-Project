@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Water Quality Monitor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-datalabels@2.0.0"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800">
+
+    <!-- Error Overlay -->
+    <div id="error-overlay" class="hidden fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center z-50 p-4 transition-opacity duration-300">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full text-center shadow-2xl transform transition-all duration-300 scale-95 opacity-0" id="error-modal">
+            <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+            <h2 class="text-2xl font-bold mb-2">Connection Error</h2>
+            <p class="text-slate-600">Could not connect to the backend server. Please ensure the <code class="bg-slate-200 text-slate-800 px-1.5 py-0.5 rounded">backend_server.py</code> script is running in your terminal and then refresh this page.</p>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-4xl">
+        <!-- Header -->
+        <header class="flex justify-between items-center mb-6">
+            <div>
+                <h1 class="text-3xl font-bold text-cyan-600">Water Quality Monitor</h1>
+                <p class="text-slate-500">Real-time sensor monitoring with AI analysis</p>
+            </div>
+            <div id="connection-status" class="flex items-center space-x-2 bg-red-100 text-red-700 rounded-full px-4 py-1.5 transition-all duration-300">
+                <div id="status-dot" class="w-2.5 h-2.5 bg-red-500 rounded-full"></div>
+                <span id="status-text" class="text-sm font-medium">Disconnected</span>
+            </div>
+        </header>
+
+        <!-- Main Dashboard -->
+        <main class="space-y-6">
+            <!-- AI Assessment Card -->
+            <div id="assessment-card" class="bg-gray-200 p-6 sm:p-8 rounded-2xl shadow-sm text-center transition-all duration-500">
+                <div class="flex justify-center items-center mb-3">
+                     <svg id="assessment-icon" class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                </div>
+                <p class="text-sm font-medium text-gray-600 mb-1" id="assessment-title">AI WATER QUALITY ASSESSMENT</p>
+                <p class="text-4xl sm:text-5xl font-bold text-gray-700 mb-4" id="assessment-status">--</p>
+                <div class="flex justify-center items-center space-x-4 text-sm text-gray-500">
+                    <span id="assessment-confidence">Confidence: --%</span>
+                    <span>|</span>
+                    <span id="assessment-updated">Updated: --:--:-- --</span>
+                </div>
+            </div>
+
+            <!-- Sensor Readings Grid -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- Electrical Conductivity Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center space-x-3 text-cyan-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
+                                <h2 class="font-semibold">Electrical Conductivity</h2>
+                            </div>
+                            <span id="ec-status-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-200 text-gray-700">--</span>
+                        </div>
+                        <p class="text-4xl font-bold text-slate-800 mb-1"><span id="ec-value">---</span> <span class="text-2xl font-medium text-slate-400">µS/cm</span></p>
+                        <p class="text-sm text-slate-500">Measures dissolved ions and salts in water</p>
+                    </div>
+                </div>
+
+                <!-- Turbidity Card -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm flex flex-col justify-between">
+                    <div>
+                        <div class="flex justify-between items-start mb-2">
+                            <div class="flex items-center space-x-3 text-cyan-600">
+                                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3.52 9.52A9.5 9.5 0 0118.48 4.52M4.52 18.48A9.5 9.5 0 019.52 3.52M12 17.5a5.5 5.5 0 100-11 5.5 5.5 0 000 11zM18.48 4.52L3.52 19.48"></path></svg>
+                                <h2 class="font-semibold">Turbidity</h2>
+                            </div>
+                             <span id="turbidity-status-badge" class="text-xs font-bold px-2.5 py-1 rounded-full bg-gray-200 text-gray-700">--</span>
+                        </div>
+                        <p class="text-4xl font-bold text-slate-800 mb-1"><span id="turbidity-value">---</span> <span class="text-2xl font-medium text-slate-400">NTU</span></p>
+                        <p class="text-sm text-slate-500">Measures cloudiness and particle content</p>
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        // --- DOM Elements ---
+        const connectionStatus = document.getElementById('connection-status');
+        const statusDot = document.getElementById('status-dot');
+        const statusText = document.getElementById('status-text');
+        
+        const assessmentCard = document.getElementById('assessment-card');
+        const assessmentIcon = document.getElementById('assessment-icon');
+        const assessmentStatus = document.getElementById('assessment-status');
+        const assessmentConfidence = document.getElementById('assessment-confidence');
+        const assessmentUpdated = document.getElementById('assessment-updated');
+
+        const ecValue = document.getElementById('ec-value');
+        const ecStatusBadge = document.getElementById('ec-status-badge');
+        const turbidityValue = document.getElementById('turbidity-value');
+        const turbidityStatusBadge = document.getElementById('turbidity-status-badge');
+
+        const errorOverlay = document.getElementById('error-overlay');
+        const errorModal = document.getElementById('error-modal');
+
+        const goodIcon = `<svg class="w-8 h-8 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        const moderateIcon = `<svg class="w-8 h-8 text-yellow-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+        const badIcon = `<svg class="w-8 h-8 text-red-600" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+        const defaultIcon = `<svg class="w-8 h-8 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8.228 9c.549-1.165 2.03-2 3.772-2 2.21 0 4 1.343 4 3 0 1.4-1.278 2.575-3.006 2.907-.542.104-.994.54-.994 1.093m0 3h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+
+        function updateUI(data) {
+            // --- Update Connection Status ---
+            if (data.connected) {
+                connectionStatus.classList.remove('bg-red-100', 'text-red-700');
+                connectionStatus.classList.add('bg-green-100', 'text-green-700');
+                statusDot.classList.remove('bg-red-500');
+                statusDot.classList.add('bg-green-500');
+                statusText.textContent = 'Connected';
+            } else {
+                // Style for disconnected (already default)
+                return; // Don't update sensor values if disconnected
+            }
+
+            // --- Update Main Assessment Card ---
+            assessmentStatus.textContent = data.status.toUpperCase();
+            assessmentConfidence.textContent = `Confidence: ${data.quality_score}%`;
+            assessmentUpdated.textContent = `Updated: ${data.last_updated}`;
+
+            // Update card color and icon based on status
+            assessmentCard.classList.remove('bg-green-500', 'bg-yellow-400', 'bg-red-500', 'bg-gray-200');
+            assessmentCard.querySelectorAll('p, span').forEach(el => el.classList.remove('text-white', 'text-gray-700', 'text-gray-600', 'text-gray-500'));
+            
+            if (data.status === 'Low Risk') {
+                assessmentCard.classList.add('bg-green-500');
+                assessmentIcon.innerHTML = goodIcon;
+            } else if (data.status === 'Moderate Risk') {
+                assessmentCard.classList.add('bg-yellow-400');
+                assessmentIcon.innerHTML = moderateIcon;
+            } else {
+                assessmentCard.classList.add('bg-red-500');
+                assessmentIcon.innerHTML = badIcon;
+            }
+            assessmentCard.querySelectorAll('p, span').forEach(el => el.classList.add('text-white'));
+
+            // --- Update Sensor Cards ---
+            ecValue.textContent = data.ec.toFixed(2);
+            turbidityValue.textContent = data.turbidity.toFixed(2);
+
+            // Update EC badge
+            ecStatusBadge.textContent = data.ec > 600 ? 'High' : (data.ec > 300 ? 'Moderate' : 'Good');
+            ecStatusBadge.className = 'text-xs font-bold px-2.5 py-1 rounded-full ' + (data.ec > 600 ? 'bg-red-100 text-red-700' : (data.ec > 300 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'));
+            
+            // Update Turbidity badge
+            turbidityStatusBadge.textContent = data.turbidity > 10 ? 'Danger' : (data.turbidity > 5 ? 'Warning' : 'Good');
+            turbidityStatusBadge.className = 'text-xs font-bold px-2.5 py-1 rounded-full ' + (data.turbidity > 10 ? 'bg-red-100 text-red-700' : (data.turbidity > 5 ? 'bg-yellow-100 text-yellow-700' : 'bg-green-100 text-green-700'));
+        }
+
+        function showConnectionError() {
+            errorOverlay.classList.remove('hidden');
+            setTimeout(() => {
+                errorOverlay.classList.add('opacity-100');
+                errorModal.classList.remove('scale-95', 'opacity-0');
+                errorModal.classList.add('scale-100', 'opacity-100');
+            }, 10); // Short delay to allow CSS transition
+            
+            // Update the small status indicator as well
+            connectionStatus.classList.remove('bg-green-100', 'text-green-700');
+            connectionStatus.classList.add('bg-red-100', 'text-red-700');
+            statusDot.classList.remove('bg-green-500');
+            statusDot.classList.add('bg-red-500');
+            statusText.textContent = 'Disconnected';
+        }
+
+        function hideConnectionError() {
+             errorOverlay.classList.add('hidden');
+        }
+        
+        // --- Data Fetching ---
+        async function fetchData() {
+            try {
+                const response = await fetch('http://127.0.0.1:5000/data');
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
+                const data = await response.json();
+                hideConnectionError(); // Hide error on successful fetch
+                updateUI(data);
+            } catch (error) {
+                console.error("Could not fetch data:", error);
+                showConnectionError();
+            }
+        }
+
+        // Fetch data every 2 seconds
+        setInterval(fetchData, 2000);
+        // Initial fetch
+        fetchData();
+    </script>
+
+</body>
+</html>
